@@ -15,24 +15,58 @@
             align-items: center;
         }
 
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1000px;
+        }
+
         .card {
             background: #313244;
             border-radius: 12px;
             padding: 20px;
             margin: 10px;
-            width: 300px;
+            width: 280px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         h2 {
             margin-top: 0;
             color: #89b4fa;
+            font-size: 16px;
+            border-bottom: 1px solid #45475a;
+            padding-bottom: 8px;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+
+        .label {
+            color: #a6adc8;
         }
 
         .value {
-            font-size: 24px;
             font-weight: bold;
             color: #a6e3a1;
+        }
+
+        .value-warn {
+            color: #f9e2af;
+        }
+
+        .value-hot {
+            color: #f38ba8;
+        }
+
+        .chip-name {
+            color: #cba6f7;
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 10px;
         }
     </style>
 </head>
@@ -40,37 +74,140 @@
 <body>
 
     <h1>Мониторинг Mac</h1>
+    <div id="chip" class="chip-name">Загрузка...</div>
 
-    <div class="card">
-        <h2>Потребление энергии</h2>
-        <div id="power" class="value">Загрузка...</div>
-    </div>
+    <div class="container">
 
-    <div class="card">
-        <h2>Температура CPU</h2>
-        <div id="temp" class="value">Загрузка...</div>
+        <div class="card">
+            <h2>🔋 Потребление энергии</h2>
+            <div class="row"><span class="label">CPU</span><span id="cpu_power" class="value">—</span></div>
+            <div class="row"><span class="label">GPU</span><span id="gpu_power" class="value">—</span></div>
+            <div class="row"><span class="label">ANE</span><span id="ane_power" class="value">—</span></div>
+            <div class="row"><span class="label">RAM</span><span id="ram_power" class="value">—</span></div>
+            <div class="row"><span class="label">GPU RAM</span><span id="gpu_ram_power" class="value">—</span></div>
+            <div class="row" style="border-top:1px solid #45475a;padding-top:8px;margin-top:4px;">
+                <span class="label"><b>Всего</b></span><span id="all_power" class="value">—</span>
+            </div>
+            <div class="row"><span class="label">Система</span><span id="sys_power" class="value">—</span></div>
+        </div>
+
+        <div class="card">
+            <h2>🌡️ Температура</h2>
+            <div class="row"><span class="label">CPU</span><span id="cpu_temp" class="value">—</span></div>
+            <div class="row"><span class="label">GPU</span><span id="gpu_temp" class="value">—</span></div>
+        </div>
+
+        <div class="card">
+            <h2>⚡ CPU</h2>
+            <div class="row"><span class="label">Загрузка</span><span id="cpu_usage" class="value">—</span></div>
+            <div class="row"><span class="label">Active ratio</span><span id="cpu_active" class="value">—</span></div>
+            <div class="row"><span class="label">E-ядра freq</span><span id="ecpu_freq" class="value">—</span></div>
+            <div class="row"><span class="label">E-ядра загрузка</span><span id="ecpu_usage" class="value">—</span></div>
+            <div class="row"><span class="label">P-ядра freq</span><span id="pcpu_freq" class="value">—</span></div>
+            <div class="row"><span class="label">P-ядра загрузка</span><span id="pcpu_usage" class="value">—</span></div>
+        </div>
+
+        <div class="card">
+            <h2>🎮 GPU</h2>
+            <div class="row"><span class="label">Частота</span><span id="gpu_freq" class="value">—</span></div>
+            <div class="row"><span class="label">Загрузка</span><span id="gpu_usage" class="value">—</span></div>
+            <div class="row"><span class="label">Active ratio</span><span id="gpu_active" class="value">—</span></div>
+        </div>
+
+        <div class="card">
+            <h2>💾 Память</h2>
+            <div class="row"><span class="label">RAM used</span><span id="ram_used" class="value">—</span></div>
+            <div class="row"><span class="label">RAM total</span><span id="ram_total" class="value">—</span></div>
+            <div class="row"><span class="label">Swap used</span><span id="swap_used" class="value">—</span></div>
+            <div class="row"><span class="label">Swap total</span><span id="swap_total" class="value">—</span></div>
+        </div>
+
+        <div class="card">
+            <h2>🌀 Вентиляторы</h2>
+            <div id="fans">Нет данных</div>
+        </div>
+
     </div>
 
     <script>
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + units[i];
+        }
+
+        function formatRatio(val) {
+            return (val * 100).toFixed(1) + '%';
+        }
+
+        function tempColor(val) {
+            if (val > 80) return 'value-hot';
+            if (val > 60) return 'value-warn';
+            return 'value';
+        }
+
         async function updateStats() {
             try {
-                // Берем данные от запущенного macmon
                 const response = await fetch('http://localhost:9090/json');
                 const data = await response.json();
 
-                // Выводим общую мощность CPU+GPU+ANE (в Ваттах)
-                const powerW = data.all_power.toFixed(2);
-                document.getElementById('power').innerText = powerW + ' Вт';
+                // Chip info
+                document.getElementById('chip').innerText = data.soc?.chip_name || '—';
 
-                // Выводим среднюю температуру процессора
-                const cpuTemp = data.temp.cpu_temp_avg.toFixed(1);
-                document.getElementById('temp').innerText = cpuTemp + ' °C';
+                // Power
+                document.getElementById('cpu_power').innerText = data.cpu_power?.toFixed(2) + ' Вт';
+                document.getElementById('gpu_power').innerText = data.gpu_power?.toFixed(2) + ' Вт';
+                document.getElementById('ane_power').innerText = data.ane_power?.toFixed(2) + ' Вт';
+                document.getElementById('ram_power').innerText = data.ram_power?.toFixed(2) + ' Вт';
+                document.getElementById('gpu_ram_power').innerText = data.gpu_ram_power?.toFixed(2) + ' Вт';
+                document.getElementById('all_power').innerText = data.all_power?.toFixed(2) + ' Вт';
+                document.getElementById('sys_power').innerText = data.sys_power?.toFixed(2) + ' Вт';
+
+                // Temperature
+                const cpuTemp = data.temp?.cpu_temp_avg;
+                const gpuTemp = data.temp?.gpu_temp_avg;
+                document.getElementById('cpu_temp').innerHTML =
+                    `<span class="${tempColor(cpuTemp)}">${cpuTemp?.toFixed(1) ?? '—'} °C</span>`;
+                document.getElementById('gpu_temp').innerHTML =
+                    `<span class="${tempColor(gpuTemp)}">${gpuTemp?.toFixed(1) ?? '—'} °C</span>`;
+
+                // CPU
+                document.getElementById('cpu_usage').innerText = formatRatio(data.cpu_usage_pct);
+                document.getElementById('cpu_active').innerText = formatRatio(data.cpu_active_ratio);
+                document.getElementById('ecpu_freq').innerText = (data.ecpu_usage?.[0] ?? '—') + ' МГц';
+                document.getElementById('ecpu_usage').innerText = formatRatio(data.ecpu_usage?.[1] ?? 0);
+                document.getElementById('pcpu_freq').innerText = (data.pcpu_usage?.[0] ?? '—') + ' МГц';
+                document.getElementById('pcpu_usage').innerText = formatRatio(data.pcpu_usage?.[1] ?? 0);
+
+                // GPU
+                document.getElementById('gpu_freq').innerText = (data.gpu_usage?.[0] ?? '—') + ' МГц';
+                document.getElementById('gpu_usage').innerText = formatRatio(data.gpu_usage?.[1] ?? 0);
+                document.getElementById('gpu_active').innerText = formatRatio(data.gpu_active_ratio ?? 0);
+
+                // Memory
+                document.getElementById('ram_used').innerText = formatBytes(data.memory?.ram_usage ?? 0);
+                document.getElementById('ram_total').innerText = formatBytes(data.memory?.ram_total ?? 0);
+                document.getElementById('swap_used').innerText = formatBytes(data.memory?.swap_usage ?? 0);
+                document.getElementById('swap_total').innerText = formatBytes(data.memory?.swap_total ?? 0);
+
+                // Fans
+                const fansEl = document.getElementById('fans');
+                if (data.fans && data.fans.length > 0) {
+                    let html = '';
+                    for (const fan of data.fans) {
+                        const maxStr = fan.max_rpm != null ? ` / ${fan.max_rpm}` : '';
+                        html += `<div class="row"><span class="label">${fan.name}</span><span class="value">${fan.rpm}${maxStr} RPM</span></div>`;
+                    }
+                    fansEl.innerHTML = html;
+                } else {
+                    fansEl.innerText = 'Нет данных';
+                }
             } catch (error) {
                 console.error("Ошибка получения данных:", error);
             }
         }
 
-        // Обновляем данные каждую секунду
         setInterval(updateStats, 1000);
         updateStats();
     </script>

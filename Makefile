@@ -27,4 +27,9 @@ bench:
 		'./target/release/macmon pipe --samples 100 --interval 100'
 
 serve:
+	@if ! nc -z 127.0.0.1 9090 2>/dev/null; then \
+		echo "macmon serve не запущен, запускаю..."; \
+		./target/release/macmon serve & \
+		sleep 1; \
+	fi
 	python3 example-html/macmon.server.py
