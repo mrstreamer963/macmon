@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Macmon Light UI</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1e1e2e;
+            color: #cdd6f4;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .card {
+            background: #313244;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 10px;
+            width: 300px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #89b4fa;
+        }
+
+        .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #a6e3a1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Мониторинг Mac</h1>
+
+    <div class="card">
+        <h2>Потребление энергии</h2>
+        <div id="power" class="value">Загрузка...</div>
+    </div>
+
+    <div class="card">
+        <h2>Температура CPU</h2>
+        <div id="temp" class="value">Загрузка...</div>
+    </div>
+
+    <script>
+        async function updateStats() {
+            try {
+                // Берем данные от запущенного macmon
+                const response = await fetch('http://localhost:9090/json');
+                const data = await response.json();
+
+                // Выводим общую мощность CPU+GPU+ANE (в Ваттах)
+                const powerW = data.all_power.toFixed(2);
+                document.getElementById('power').innerText = powerW + ' Вт';
+
+                // Выводим среднюю температуру процессора
+                const cpuTemp = data.temp.cpu_temp_avg.toFixed(1);
+                document.getElementById('temp').innerText = cpuTemp + ' °C';
+            } catch (error) {
+                console.error("Ошибка получения данных:", error);
+            }
+        }
+
+        // Обновляем данные каждую секунду
+        setInterval(updateStats, 1000);
+        updateStats();
+    </script>
+</body>
+
+</html>

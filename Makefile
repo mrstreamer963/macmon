@@ -1,4 +1,4 @@
-.PHONY: prepare check test build update bench
+.PHONY: prepare check test build update bench serve
 
 prepare:
 	cargo fmt
@@ -25,3 +25,6 @@ bench:
 	hyperfine --warmup 1 --runs 3 --command-name old --command-name new \
 		'/opt/homebrew/bin/macmon pipe --samples 100 --interval 100' \
 		'./target/release/macmon pipe --samples 100 --interval 100'
+
+serve:
+	python3 example-html/macmon.server.py

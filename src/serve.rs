@@ -98,7 +98,7 @@ fn write_response(stream: &mut TcpStream, status: u16, content_type: &str, body:
   };
   let _ = stream.write_all(
     format!(
-      "HTTP/1.1 {status} {status_text}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+      "HTTP/1.1 {status} {status_text}\r\nContent-Type: {content_type}\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
       body.len()
     )
     .as_bytes(),
